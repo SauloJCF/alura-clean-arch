@@ -264,7 +264,7 @@ export class AppController {
       );
     }
 
-    const [_, carrinhoAtualizado] = await this.prisma.$transaction([
+    const [, carrinhoAtualizado] = await this.prisma.$transaction([
       this.prisma.produto.update({
         where: { id: itemDto.produtoId },
         data: { estoque: { decrement: itemDto.quantidade } },
@@ -332,7 +332,7 @@ export class AppController {
       );
     }
 
-    const [_, carrinhoAtualizado] = await this.prisma.$transaction([
+    const [, carrinhoAtualizado] = await this.prisma.$transaction([
       this.prisma.produto.update({
         where: { id: produtoId },
         data: { estoque: { increment: itemNoCarrinho.quantidade } },
