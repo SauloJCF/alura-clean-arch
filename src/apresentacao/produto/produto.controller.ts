@@ -15,6 +15,7 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import CriarProdutoDto from './dto/criar-produto.dto';
 import AtualizarProdutoDto from './dto/atualizar-produto.dto';
 import { PrismaClient } from '@prisma/client';
+import { CriarProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/criar-produto.caso-de-uso';
 
 @ApiTags('produto')
 @Controller('produto')
@@ -33,17 +34,9 @@ export class ProdutoController {
   })
   @Post('produtos')
   async criarProduto(@Body() dadosDoProduto: CriarProdutoDto) {
-    const produtoExistente = await this.prisma.produto.findUnique({
-      where: { nome: dadosDoProduto.nome },
-    });
+    const criarProdutoCasoDeUso = new CriarProdutoCasoDeUso(this.prisma);
 
-    if (produtoExistente) {
-      throw new ConflictException('Já existe um produto com este nome.');
-    }
-
-    const produto = await this.prisma.produto.create({
-      data: dadosDoProduto,
-    });
+    const produto = await criarProdutoCasoDeUso.executar(dadosDoProduto);
 
     return { mensagem: 'Produto criado com sucesso!', produto };
   }
