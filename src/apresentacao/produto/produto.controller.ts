@@ -1,12 +1,9 @@
 import {
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -16,6 +13,10 @@ import CriarProdutoDto from './dto/criar-produto.dto';
 import AtualizarProdutoDto from './dto/atualizar-produto.dto';
 import { PrismaClient } from '@prisma/client';
 import { CriarProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/criar-produto.caso-de-uso';
+import { ListarProdutosCasoDeUso } from '../../dominios/produto/casos-de-uso/listar-produtos.caso-de-uso';
+import { BuscarProdutoPorIdCasoDeUso } from '../../dominios/produto/casos-de-uso/buscar-produto-por-id.caso-de-uso';
+import { AtualizarProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/atualizar-produto.caso-de-uso';
+import { RemoverProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/remover-produto.caso-de-uso';
 
 @ApiTags('produto')
 @Controller('produto')
@@ -48,7 +49,8 @@ export class ProdutoController {
   })
   @Get('produtos')
   async listarTodos() {
-    return this.prisma.produto.findMany();
+    const casoDeUso = new ListarProdutosCasoDeUso(this.prisma);
+    return casoDeUso.executar();
   }
 
   @ApiOperation({ summary: 'Obter um produto específico' })
@@ -63,11 +65,8 @@ export class ProdutoController {
   })
   @Get('produtos/:id')
   async buscarProdutoPorId(@Param('id') id: string) {
-    const produto = await this.prisma.produto.findUnique({ where: { id } });
-    if (!produto) {
-      throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
-    }
-    return produto;
+    const casoDeUso = new BuscarProdutoPorIdCasoDeUso(this.prisma);
+    return casoDeUso.executar(id);
   }
 
   @ApiOperation({ summary: 'Atualizar um produto existente' })
@@ -89,19 +88,8 @@ export class ProdutoController {
     @Param('id') id: string,
     @Body() dadosParaAtualizar: AtualizarProdutoDto,
   ) {
-    await this.buscarProdutoPorId(id);
-
-    if (Object.keys(dadosParaAtualizar).length === 0) {
-      throw new BadRequestException(
-        'Pelo menos um campo deve ser fornecido para atualização.',
-      );
-    }
-
-    const produtoAtualizado = await this.prisma.produto.update({
-      where: { id },
-      data: dadosParaAtualizar,
-    });
-
+    const casoDeUso = new AtualizarProdutoCasoDeUso(this.prisma);
+    const produtoAtualizado = await casoDeUso.executar(id, dadosParaAtualizar);
     return { mensagem: 'Produto atualizado!', produto: produtoAtualizado };
   }
 
@@ -118,7 +106,7 @@ export class ProdutoController {
   @Delete('produtos/:id')
   @HttpCode(204)
   async removerProduto(@Param('id') id: string) {
-    await this.buscarProdutoPorId(id);
-    await this.prisma.produto.delete({ where: { id } });
+    const casoDeUso = new RemoverProdutoCasoDeUso(this.prisma);
+    await casoDeUso.executar(id);
   }
 }
