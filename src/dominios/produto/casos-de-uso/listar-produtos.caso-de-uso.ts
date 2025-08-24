@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import ProdutoEntidade from '../../entidades/produto.entidade';
+import { IProdutoRepositorio } from '../i-produto.repositorio';
 
 export class ListarProdutosCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly produtoRepositorio: IProdutoRepositorio) {}
 
   async executar(): Promise<ProdutoEntidade[]> {
-    return this.prisma.produto.findMany();
+    return this.produtoRepositorio.listarProduto();
   }
 }

@@ -1,5 +1,5 @@
 import ProdutoEntidade from '../entidades/produto.entidade';
 
-export interface IProdutoRepositorio {
-  listarProduto(): Promise<ProdutoEntidade>;
+export abstract class IProdutoRepositorio {
+  abstract listarProduto(): Promise<ProdutoEntidade[]>;
 }
