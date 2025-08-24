@@ -21,6 +21,10 @@ import { RemoverProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/rem
 @ApiTags('produto')
 @Controller('produto')
 export class ProdutoController {
+  constructor(
+    private readonly listarProdutosCasoDeUso: ListarProdutosCasoDeUso,
+  ) {}
+
   // Instanciação direta do PrismaClient.
   private readonly prisma = new PrismaClient();
 
@@ -49,8 +53,7 @@ export class ProdutoController {
   })
   @Get('produtos')
   async listarTodos() {
-    const casoDeUso = new ListarProdutosCasoDeUso(this.prisma);
-    return casoDeUso.executar();
+    return this.listarProdutosCasoDeUso.executar();
   }
 
   @ApiOperation({ summary: 'Obter um produto específico' })
