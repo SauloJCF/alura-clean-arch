@@ -11,7 +11,6 @@ import {
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import CriarProdutoDto from './dto/criar-produto.dto';
 import AtualizarProdutoDto from './dto/atualizar-produto.dto';
-import { PrismaClient } from '@prisma/client';
 import { CriarProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/criar-produto.caso-de-uso';
 import { ListarProdutosCasoDeUso } from '../../dominios/produto/casos-de-uso/listar-produtos.caso-de-uso';
 import { BuscarProdutoPorIdCasoDeUso } from '../../dominios/produto/casos-de-uso/buscar-produto-por-id.caso-de-uso';
@@ -23,10 +22,11 @@ import { RemoverProdutoCasoDeUso } from '../../dominios/produto/casos-de-uso/rem
 export class ProdutoController {
   constructor(
     private readonly listarProdutosCasoDeUso: ListarProdutosCasoDeUso,
+    private readonly criarProdutoCasoDeUso: CriarProdutoCasoDeUso,
+    private readonly buscarProdutoPorIdCasoDeUso: BuscarProdutoPorIdCasoDeUso,
+    private readonly atualizarProdutoCasoDeUso: AtualizarProdutoCasoDeUso,
+    private readonly removerProdutoCasoDeUso: RemoverProdutoCasoDeUso,
   ) {}
-
-  // Instanciação direta do PrismaClient.
-  private readonly prisma = new PrismaClient();
 
   @ApiOperation({ summary: 'Criar um novo produto' })
   @ApiResponse({
@@ -39,10 +39,7 @@ export class ProdutoController {
   })
   @Post('produtos')
   async criarProduto(@Body() dadosDoProduto: CriarProdutoDto) {
-    const criarProdutoCasoDeUso = new CriarProdutoCasoDeUso(this.prisma);
-
-    const produto = await criarProdutoCasoDeUso.executar(dadosDoProduto);
-
+    const produto = await this.criarProdutoCasoDeUso.executar(dadosDoProduto);
     return { mensagem: 'Produto criado com sucesso!', produto };
   }
 
@@ -68,8 +65,7 @@ export class ProdutoController {
   })
   @Get('produtos/:id')
   async buscarProdutoPorId(@Param('id') id: string) {
-    const casoDeUso = new BuscarProdutoPorIdCasoDeUso(this.prisma);
-    return casoDeUso.executar(id);
+    return this.buscarProdutoPorIdCasoDeUso.executar(id);
   }
 
   @ApiOperation({ summary: 'Atualizar um produto existente' })
@@ -91,8 +87,10 @@ export class ProdutoController {
     @Param('id') id: string,
     @Body() dadosParaAtualizar: AtualizarProdutoDto,
   ) {
-    const casoDeUso = new AtualizarProdutoCasoDeUso(this.prisma);
-    const produtoAtualizado = await casoDeUso.executar(id, dadosParaAtualizar);
+    const produtoAtualizado = await this.atualizarProdutoCasoDeUso.executar(
+      id,
+      dadosParaAtualizar,
+    );
     return { mensagem: 'Produto atualizado!', produto: produtoAtualizado };
   }
 
@@ -109,7 +107,6 @@ export class ProdutoController {
   @Delete('produtos/:id')
   @HttpCode(204)
   async removerProduto(@Param('id') id: string) {
-    const casoDeUso = new RemoverProdutoCasoDeUso(this.prisma);
-    await casoDeUso.executar(id);
+    await this.removerProdutoCasoDeUso.executar(id);
   }
 }

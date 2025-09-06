@@ -1,30 +1,30 @@
-import { BadRequestException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import ProdutoEntidade from '../../entidades/produto.entidade';
-import { BuscarProdutoPorIdCasoDeUso } from './buscar-produto-por-id.caso-de-uso';
+import { IProdutoRepositorio } from '../i-produto.repositorio';
 
+@Injectable()
 export class AtualizarProdutoCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly produtoRepositorio: IProdutoRepositorio) {}
 
   async executar(
     id: string,
     dadosParaAtualizar: Partial<Omit<ProdutoEntidade, 'id'>>,
   ): Promise<ProdutoEntidade> {
-    // Verifica existência
-    const buscar = new BuscarProdutoPorIdCasoDeUso(this.prisma);
-    await buscar.executar(id);
-
     if (!dadosParaAtualizar || Object.keys(dadosParaAtualizar).length === 0) {
       throw new BadRequestException(
         'Pelo menos um campo deve ser fornecido para atualização.',
       );
     }
 
-    const produtoAtualizado = await this.prisma.produto.update({
-      where: { id },
-      data: dadosParaAtualizar,
-    });
+    const existente = await this.produtoRepositorio.buscarPorId(id);
+    if (!existente) {
+      throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
+    }
 
-    return produtoAtualizado as ProdutoEntidade;
+    return this.produtoRepositorio.atualizarProduto(id, dadosParaAtualizar);
   }
 }

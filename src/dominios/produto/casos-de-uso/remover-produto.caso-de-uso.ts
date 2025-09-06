@@ -1,12 +1,15 @@
-import { PrismaClient } from '@prisma/client';
-import { BuscarProdutoPorIdCasoDeUso } from './buscar-produto-por-id.caso-de-uso';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { IProdutoRepositorio } from '../i-produto.repositorio';
 
+@Injectable()
 export class RemoverProdutoCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly produtoRepositorio: IProdutoRepositorio) {}
 
   async executar(id: string): Promise<void> {
-    const buscar = new BuscarProdutoPorIdCasoDeUso(this.prisma);
-    await buscar.executar(id);
-    await this.prisma.produto.delete({ where: { id } });
+    const existente = await this.produtoRepositorio.buscarPorId(id);
+    if (!existente) {
+      throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
+    }
+    await this.produtoRepositorio.removerProduto(id);
   }
 }

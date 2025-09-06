@@ -13,4 +13,30 @@ export class ProdutoRepositorio implements IProdutoRepositorio {
   listarProduto(): Promise<ProdutoEntidade[]> {
     return this.prismaClient.produto.findMany();
   }
+
+  buscarPorId(id: string): Promise<ProdutoEntidade | null> {
+    return this.prismaClient.produto.findUnique({ where: { id } });
+  }
+
+  buscarPorNome(nome: string): Promise<ProdutoEntidade | null> {
+    return this.prismaClient.produto.findUnique({ where: { nome } });
+  }
+
+  criarProduto(dados: Omit<ProdutoEntidade, 'id'>): Promise<ProdutoEntidade> {
+    return this.prismaClient.produto.create({ data: dados });
+  }
+
+  atualizarProduto(
+    id: string,
+    dados: Partial<Omit<ProdutoEntidade, 'id'>>,
+  ): Promise<ProdutoEntidade> {
+    return this.prismaClient.produto.update({
+      where: { id },
+      data: dados,
+    });
+  }
+
+  async removerProduto(id: string): Promise<void> {
+    await this.prismaClient.produto.delete({ where: { id } });
+  }
 }
