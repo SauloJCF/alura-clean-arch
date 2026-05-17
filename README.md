@@ -10,11 +10,27 @@ uma aplicação Node.js moderna.
 
 ## Configuração
 
+### Subir container docker:
+```bash
+docker-compose up -d postgres
+```
+
+### Instalar dependências
 ```bash
 $ npm install
 ```
 
-## Compilar e rodar o projeto
+### Executar migrates prisma
+```bash
+npm run prisma:migrate
+```
+
+### Gerar entidades prisma
+```bash
+npm run prisma:generate
+```
+
+### Compilar e rodar o projeto
 
 ```bash
 # development
