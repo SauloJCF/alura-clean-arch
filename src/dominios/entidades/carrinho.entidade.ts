@@ -1,6 +1,6 @@
 class CarrinhoEntidade {
-    id: string;
-    usuarioId: string;
+  id: string;
+  usuarioId: string;
 }
 
 export default CarrinhoEntidade;
