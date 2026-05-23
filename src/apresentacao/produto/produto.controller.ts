@@ -1,17 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-
 import {
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -20,6 +12,11 @@ import { PrismaClient } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import CriarProdutoDto from './dto/criar-produto.dto';
 import AtualizarProdutoDto from './dto/atualizar-produto.dto';
+import { CriarProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/criar-produto.caso-de-uso';
+import { ListarProdutosCasoDeUso } from 'src/dominios/produto/casos-de-uso/listar-produtos.caso-de-uso';
+import { BuscarProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/buscar-produto.caso-de-uso';
+import { AtualizarProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/atualizar-produto.caso-de-uso';
+import { RemoverProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/remover-produto.caso-de-uso';
 
 @ApiTags('produtos')
 @Controller('produto')
@@ -40,17 +37,9 @@ export class ProdutoController {
   })
   @Post('produtos')
   async criarProduto(@Body() dadosDoProduto: CriarProdutoDto) {
-    const produtoExistente = await this.prisma.produto.findUnique({
-      where: { nome: dadosDoProduto.nome },
-    });
+    const criarProdutoCasoDeUso = new CriarProdutoCasoDeUso(this.prisma);
 
-    if (produtoExistente) {
-      throw new ConflictException('Já existe um produto com este nome.');
-    }
-
-    const produto = await this.prisma.produto.create({
-      data: dadosDoProduto,
-    });
+    const produto = await criarProdutoCasoDeUso.executar(dadosDoProduto);
 
     return { mensagem: 'Produto criado com sucesso!', produto };
   }
@@ -62,7 +51,9 @@ export class ProdutoController {
   })
   @Get('produtos')
   async listarTodos() {
-    return await this.prisma.produto.findMany();
+    const listarProdutosCasoDeUso = new ListarProdutosCasoDeUso(this.prisma);
+
+    return await listarProdutosCasoDeUso.executar();
   }
 
   @ApiOperation({ summary: 'Obter um produto específico' })
@@ -77,10 +68,10 @@ export class ProdutoController {
   })
   @Get('produtos/:id')
   async buscarProdutoPorId(@Param('id') id: string) {
-    const produto = await this.prisma.produto.findUnique({ where: { id } });
-    if (!produto) {
-      throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
-    }
+    const buscarProdutoCasoDeUso = new BuscarProdutoCasoDeUso(this.prisma);
+
+    const produto = await buscarProdutoCasoDeUso.executar(id);
+
     return produto;
   }
 
@@ -103,18 +94,14 @@ export class ProdutoController {
     @Param('id') id: string,
     @Body() dadosParaAtualizar: AtualizarProdutoDto,
   ) {
-    await this.buscarProdutoPorId(id);
+    const atualizarProdutoCasoDeUso = new AtualizarProdutoCasoDeUso(
+      this.prisma,
+    );
 
-    if (Object.keys(dadosParaAtualizar).length === 0) {
-      throw new BadRequestException(
-        'Pelo menos um campo deve ser fornecido para atualização.',
-      );
-    }
-
-    const produtoAtualizado = await this.prisma.produto.update({
-      where: { id },
-      data: dadosParaAtualizar,
-    });
+    const produtoAtualizado = await atualizarProdutoCasoDeUso.executar(
+      id,
+      dadosParaAtualizar,
+    );
 
     return { mensagem: 'Produto atualizado!', produto: produtoAtualizado };
   }
@@ -132,7 +119,8 @@ export class ProdutoController {
   @Delete('produtos/:id')
   @HttpCode(204)
   async removerProduto(@Param('id') id: string) {
-    await this.buscarProdutoPorId(id);
-    await this.prisma.produto.delete({ where: { id } });
+    const removerProdutoCasoDeUso = new RemoverProdutoCasoDeUso(this.prisma);
+
+    await removerProdutoCasoDeUso.executar(id);
   }
 }
