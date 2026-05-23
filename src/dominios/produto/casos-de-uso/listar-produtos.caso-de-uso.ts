@@ -1,10 +1,12 @@
-import { PrismaClient } from '@prisma/client';
 import ProdutoEntidade from 'src/dominios/entidades/produto.entidade';
+import { IProdutoRepositorio } from '../i-produto.repositorio';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class ListarProdutosCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly produtoRepositorio: IProdutoRepositorio) {}
 
   public async executar(): Promise<ProdutoEntidade[]> {
-    return this.prisma.produto.findMany();
+    return this.produtoRepositorio.listarProdutos();
   }
 }

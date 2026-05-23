@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Inject,
   Param,
   Post,
   Put,
@@ -21,6 +22,10 @@ import { RemoverProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/remov
 @ApiTags('produtos')
 @Controller('produto')
 export class ProdutoController {
+  constructor(
+    private readonly listarProdutosCasoDeUso: ListarProdutosCasoDeUso,
+  ) {}
+
   // Instanciação direta do PrismaClient.
   private readonly prisma = new PrismaClient();
   // ID do usuário fixo para simulação do carrinho.
@@ -51,9 +56,7 @@ export class ProdutoController {
   })
   @Get('produtos')
   async listarTodos() {
-    const listarProdutosCasoDeUso = new ListarProdutosCasoDeUso(this.prisma);
-
-    return await listarProdutosCasoDeUso.executar();
+    return await this.listarProdutosCasoDeUso.executar();
   }
 
   @ApiOperation({ summary: 'Obter um produto específico' })
