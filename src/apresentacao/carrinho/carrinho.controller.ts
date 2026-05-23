@@ -1,21 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  NotFoundException,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import AdicionarItemCarrinhoDto from '../item-carrinho/dto/adicionar-item-carrinho.dto';
+import { AdicionarItemCarrinhoCasoDeUso } from 'src/dominios/carrinho/casos-de-uso/adicionar-item-carrinho.caso-de-uso';
+import { VerCarrinhoCasoDeUso } from 'src/dominios/carrinho/casos-de-uso/ver-carrinho.caso-de-uso';
+import { RemoverItemCarrinhoCasoDeUso } from 'src/dominios/carrinho/casos-de-uso/remover-item-carrinho.caso-de-uso';
+import { formatarCarrinho } from 'src/dominios/carrinho/servicos/carrinho.helper';
 
 @ApiTags('carrinho')
 @Controller('carrinho')
@@ -40,54 +30,17 @@ export class CarrinhoController {
   })
   @Post('carrinho/adicionar')
   async adicionarItem(@Body() itemDto: AdicionarItemCarrinhoDto) {
-    const carrinho = await this.obterOuCriarCarrinho();
-
-    const produto = await this.prisma.produto.findUnique({
-      where: { id: itemDto.produtoId },
-    });
-    if (!produto) {
-      throw new NotFoundException(
-        `Produto com ID ${itemDto.produtoId} não encontrado.`,
-      );
-    }
-
-    if (produto.estoque < itemDto.quantidade) {
-      throw new BadRequestException(
-        `Estoque insuficiente para "${produto.nome}". Disponível: ${produto.estoque}.`,
-      );
-    }
-
-    const [, carrinhoAtualizado] = await this.prisma.$transaction([
-      this.prisma.produto.update({
-        where: { id: itemDto.produtoId },
-        data: { estoque: { decrement: itemDto.quantidade } },
-      }),
-      this.prisma.carrinho.update({
-        where: { id: carrinho.id },
-        data: {
-          itens: {
-            upsert: {
-              where: {
-                produtoId_carrinhoId: {
-                  produtoId: itemDto.produtoId,
-                  carrinhoId: carrinho.id,
-                },
-              },
-              create: {
-                produtoId: itemDto.produtoId,
-                quantidade: itemDto.quantidade,
-              },
-              update: { quantidade: { increment: itemDto.quantidade } },
-            },
-          },
-        },
-        include: { itens: { include: { produto: true } } },
-      }),
-    ]);
+    const adicionarItemCarrinhoCasoDeUso = new AdicionarItemCarrinhoCasoDeUso(
+      this.prisma,
+    );
+    const carrinhoAtualizado = await adicionarItemCarrinhoCasoDeUso.executar(
+      this.usuarioId,
+      itemDto,
+    );
 
     return {
       mensagem: 'Item adicionado ao carrinho!',
-      carrinho: this.formatarCarrinho(carrinhoAtualizado),
+      carrinho: formatarCarrinho(carrinhoAtualizado),
     };
   }
 
@@ -98,8 +51,8 @@ export class CarrinhoController {
   })
   @Get('carrinho')
   async verCarrinho() {
-    const carrinho = await this.obterOuCriarCarrinho();
-    return this.formatarCarrinho(carrinho);
+    const verCarrinhoCasoDeUso = new VerCarrinhoCasoDeUso(this.prisma);
+    return await verCarrinhoCasoDeUso.executar(this.usuarioId);
   }
 
   @ApiOperation({ summary: 'Remover item do carrinho' })
@@ -114,74 +67,18 @@ export class CarrinhoController {
   })
   @Delete('carrinho/remover/:produtoId')
   async removerItem(@Param('produtoId') produtoId: string) {
-    const carrinho = await this.obterOuCriarCarrinho();
-    const itemNoCarrinho = carrinho.itens.find(
-      (i) => i.produtoId === produtoId,
+    const removerItemCarrinhoCasoDeUso = new RemoverItemCarrinhoCasoDeUso(
+      this.prisma,
     );
 
-    if (!itemNoCarrinho) {
-      throw new NotFoundException(
-        `Produto com ID ${produtoId} não está no carrinho.`,
-      );
-    }
-
-    const [, carrinhoAtualizado] = await this.prisma.$transaction([
-      this.prisma.produto.update({
-        where: { id: produtoId },
-        data: { estoque: { increment: itemNoCarrinho.quantidade } },
-      }),
-      this.prisma.carrinho.update({
-        where: { id: carrinho.id },
-        data: {
-          itens: {
-            delete: { id: itemNoCarrinho.id },
-          },
-        },
-        include: { itens: { include: { produto: true } } },
-      }),
-    ]);
+    const carrinhoAtualizado = await removerItemCarrinhoCasoDeUso.executar(
+      this.usuarioId,
+      produtoId,
+    );
 
     return {
       mensagem: 'Item removido do carrinho!',
-      carrinho: this.formatarCarrinho(carrinhoAtualizado),
-    };
-  }
-
-  // --- MÉTODOS PRIVADOS AUXILIARES ---
-
-  private async obterOuCriarCarrinho() {
-    let carrinho = await this.prisma.carrinho.findUnique({
-      where: { usuarioId: this.usuarioId },
-      include: { itens: { include: { produto: true } } },
-    });
-
-    if (!carrinho) {
-      carrinho = await this.prisma.carrinho.create({
-        data: { usuarioId: this.usuarioId },
-        include: { itens: { include: { produto: true } } },
-      });
-    }
-    return carrinho;
-  }
-
-  private formatarCarrinho(
-    carrinho: Awaited<ReturnType<typeof this.obterOuCriarCarrinho>>,
-  ) {
-    const total = carrinho.itens.reduce((acc, item) => {
-      return acc + item.quantidade * item.produto.preco;
-    }, 0);
-
-    return {
-      id: carrinho.id,
-      usuarioId: carrinho.usuarioId,
-      itens: carrinho.itens.map((i) => ({
-        produtoId: i.produtoId,
-        nome: i.produto.nome,
-        quantidade: i.quantidade,
-        precoUnitario: i.produto.preco,
-        totalItem: i.quantidade * i.produto.preco,
-      })),
-      total: total,
+      carrinho: formatarCarrinho(carrinhoAtualizado),
     };
   }
 }
