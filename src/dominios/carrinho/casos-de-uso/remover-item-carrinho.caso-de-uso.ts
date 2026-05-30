@@ -1,12 +1,15 @@
-import { PrismaClient } from '@prisma/client';
 import { obterOuCriarCarrinho } from '../servicos/carrinho.helper';
 import { NotFoundException } from '@nestjs/common';
+import { ICarrinhoRepositorio } from '../i-carrinho.repositorio';
 
 export class RemoverItemCarrinhoCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly carrinhoRepositorio: ICarrinhoRepositorio) {}
 
   public async executar(usuarioId: string, produtoId: string) {
-    const carrinho = await obterOuCriarCarrinho(this.prisma, usuarioId);
+    const carrinho = await obterOuCriarCarrinho(
+      this.carrinhoRepositorio,
+      usuarioId,
+    );
     const itemNoCarrinho = carrinho.itens.find(
       (i) => i.produtoId === produtoId,
     );
@@ -17,21 +20,12 @@ export class RemoverItemCarrinhoCasoDeUso {
       );
     }
 
-    const [, carrinhoAtualizado] = await this.prisma.$transaction([
-      this.prisma.produto.update({
-        where: { id: produtoId },
-        data: { estoque: { increment: itemNoCarrinho.quantidade } },
-      }),
-      this.prisma.carrinho.update({
-        where: { id: carrinho.id },
-        data: {
-          itens: {
-            delete: { id: itemNoCarrinho.id },
-          },
-        },
-        include: { itens: { include: { produto: true } } },
-      }),
-    ]);
+    const carrinhoAtualizado =
+      await this.carrinhoRepositorio.removerProdutoDoCarrinho(
+        carrinho.id,
+        produtoId,
+        itemNoCarrinho,
+      );
 
     return carrinhoAtualizado;
   }

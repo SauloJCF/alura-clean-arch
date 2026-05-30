@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { IProdutoRepositorio } from 'src/dominios/produto/i-produto.repositorio';
+import { ICarrinhoRepositorio } from '../i-carrinho.repositorio';
 import { obterOuCriarCarrinho } from '../servicos/carrinho.helper';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -8,14 +9,21 @@ export type AdicionarItemPayload = {
 };
 
 export class AdicionarItemCarrinhoCasoDeUso {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly carrinhoRepositorio: ICarrinhoRepositorio,
+    private readonly produtoRepositorio: IProdutoRepositorio,
+  ) {}
 
   public async executar(usuarioId: string, payload: AdicionarItemPayload) {
-    const carrinho = await obterOuCriarCarrinho(this.prisma, usuarioId);
+    const carrinho = await obterOuCriarCarrinho(
+      this.carrinhoRepositorio,
+      usuarioId,
+    );
 
-    const produto = await this.prisma.produto.findUnique({
-      where: { id: payload.produtoId },
-    });
+    const produto = await this.produtoRepositorio.buscarProdutoPorId(
+      payload.produtoId,
+    );
+
     if (!produto) {
       throw new NotFoundException(
         `Produto com ID ${payload.produtoId} não encontrado.`,
@@ -28,33 +36,12 @@ export class AdicionarItemCarrinhoCasoDeUso {
       );
     }
 
-    const [, carrinhoAtualizado] = await this.prisma.$transaction([
-      this.prisma.produto.update({
-        where: { id: payload.produtoId },
-        data: { estoque: { decrement: payload.quantidade } },
-      }),
-      this.prisma.carrinho.update({
-        where: { id: carrinho.id },
-        data: {
-          itens: {
-            upsert: {
-              where: {
-                produtoId_carrinhoId: {
-                  produtoId: payload.produtoId,
-                  carrinhoId: carrinho.id,
-                },
-              },
-              create: {
-                produtoId: payload.produtoId,
-                quantidade: payload.quantidade,
-              },
-              update: { quantidade: { increment: payload.quantidade } },
-            },
-          },
-        },
-        include: { itens: { include: { produto: true } } },
-      }),
-    ]);
+    const carrinhoAtualizado =
+      await this.carrinhoRepositorio.adicionarProdutoAoCarrinho(
+        carrinho.id,
+        payload.produtoId,
+        payload.quantidade,
+      );
 
     return carrinhoAtualizado;
   }

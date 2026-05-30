@@ -8,7 +8,6 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import CriarProdutoDto from './dto/criar-produto.dto';
 import AtualizarProdutoDto from './dto/atualizar-produto.dto';
@@ -28,9 +27,6 @@ export class ProdutoController {
     private readonly atualizarProdutoCasoDeUso: AtualizarProdutoCasoDeUso,
     private readonly removerProdutoCasoDeUso: RemoverProdutoCasoDeUso,
   ) {}
-
-  // Instanciação direta do PrismaClient.
-  private readonly prisma = new PrismaClient();
   // ID do usuário fixo para simulação do carrinho.
   private readonly usuarioId = 'usuario-123';
 

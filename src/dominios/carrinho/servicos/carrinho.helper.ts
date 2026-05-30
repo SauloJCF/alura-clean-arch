@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { ICarrinhoRepositorio } from '../i-carrinho.repositorio';
 
 export type CarrinhoFormatado = {
   id: string;
@@ -14,19 +14,14 @@ export type CarrinhoFormatado = {
 };
 
 export async function obterOuCriarCarrinho(
-  prisma: PrismaClient,
+  carrinhoRepositorio: ICarrinhoRepositorio,
   usuarioId: string,
 ) {
-  let carrinho = await prisma.carrinho.findUnique({
-    where: { usuarioId },
-    include: { itens: { include: { produto: true } } },
-  });
+  let carrinho =
+    await carrinhoRepositorio.buscarCarrinhoPorUsuarioId(usuarioId);
 
   if (!carrinho) {
-    carrinho = await prisma.carrinho.create({
-      data: { usuarioId },
-      include: { itens: { include: { produto: true } } },
-    });
+    carrinho = await carrinhoRepositorio.criarCarrinhoParaUsuario(usuarioId);
   }
   return carrinho;
 }

@@ -1,5 +1,4 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import AdicionarItemCarrinhoDto from '../item-carrinho/dto/adicionar-item-carrinho.dto';
 import { AdicionarItemCarrinhoCasoDeUso } from 'src/dominios/carrinho/casos-de-uso/adicionar-item-carrinho.caso-de-uso';
@@ -10,8 +9,13 @@ import { formatarCarrinho } from 'src/dominios/carrinho/servicos/carrinho.helper
 @ApiTags('carrinho')
 @Controller('carrinho')
 export class CarrinhoController {
-  // Instanciação direta do PrismaClient.
-  private readonly prisma = new PrismaClient();
+
+  constructor(
+    private readonly adicionarItemCarrinhoCasoDeUso: AdicionarItemCarrinhoCasoDeUso,
+    private readonly verCarrinhoCasoDeUso: VerCarrinhoCasoDeUso,
+    private readonly removerItemCarrinhoCasoDeUso: RemoverItemCarrinhoCasoDeUso,
+  ) {}
+
   // ID do usuário fixo para simulação do carrinho.
   private readonly usuarioId = 'usuario-123';
 
@@ -30,13 +34,11 @@ export class CarrinhoController {
   })
   @Post('carrinho/adicionar')
   async adicionarItem(@Body() itemDto: AdicionarItemCarrinhoDto) {
-    const adicionarItemCarrinhoCasoDeUso = new AdicionarItemCarrinhoCasoDeUso(
-      this.prisma,
-    );
-    const carrinhoAtualizado = await adicionarItemCarrinhoCasoDeUso.executar(
-      this.usuarioId,
-      itemDto,
-    );
+    const carrinhoAtualizado =
+      await this.adicionarItemCarrinhoCasoDeUso.executar(
+        this.usuarioId,
+        itemDto,
+      );
 
     return {
       mensagem: 'Item adicionado ao carrinho!',
@@ -51,8 +53,7 @@ export class CarrinhoController {
   })
   @Get('carrinho')
   async verCarrinho() {
-    const verCarrinhoCasoDeUso = new VerCarrinhoCasoDeUso(this.prisma);
-    return await verCarrinhoCasoDeUso.executar(this.usuarioId);
+    return await this.verCarrinhoCasoDeUso.executar(this.usuarioId);
   }
 
   @ApiOperation({ summary: 'Remover item do carrinho' })
@@ -67,11 +68,7 @@ export class CarrinhoController {
   })
   @Delete('carrinho/remover/:produtoId')
   async removerItem(@Param('produtoId') produtoId: string) {
-    const removerItemCarrinhoCasoDeUso = new RemoverItemCarrinhoCasoDeUso(
-      this.prisma,
-    );
-
-    const carrinhoAtualizado = await removerItemCarrinhoCasoDeUso.executar(
+    const carrinhoAtualizado = await this.removerItemCarrinhoCasoDeUso.executar(
       this.usuarioId,
       produtoId,
     );
