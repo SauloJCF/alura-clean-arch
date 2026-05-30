@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   HttpCode,
-  Inject,
   Param,
   Post,
   Put,
@@ -23,7 +22,11 @@ import { RemoverProdutoCasoDeUso } from 'src/dominios/produto/casos-de-uso/remov
 @Controller('produto')
 export class ProdutoController {
   constructor(
+    private readonly criarProdutoCasoDeUso: CriarProdutoCasoDeUso,
     private readonly listarProdutosCasoDeUso: ListarProdutosCasoDeUso,
+    private readonly buscarProdutoCasoDeUso: BuscarProdutoCasoDeUso,
+    private readonly atualizarProdutoCasoDeUso: AtualizarProdutoCasoDeUso,
+    private readonly removerProdutoCasoDeUso: RemoverProdutoCasoDeUso,
   ) {}
 
   // Instanciação direta do PrismaClient.
@@ -42,9 +45,7 @@ export class ProdutoController {
   })
   @Post('produtos')
   async criarProduto(@Body() dadosDoProduto: CriarProdutoDto) {
-    const criarProdutoCasoDeUso = new CriarProdutoCasoDeUso(this.prisma);
-
-    const produto = await criarProdutoCasoDeUso.executar(dadosDoProduto);
+    const produto = await this.criarProdutoCasoDeUso.executar(dadosDoProduto);
 
     return { mensagem: 'Produto criado com sucesso!', produto };
   }
@@ -71,9 +72,7 @@ export class ProdutoController {
   })
   @Get('produtos/:id')
   async buscarProdutoPorId(@Param('id') id: string) {
-    const buscarProdutoCasoDeUso = new BuscarProdutoCasoDeUso(this.prisma);
-
-    const produto = await buscarProdutoCasoDeUso.executar(id);
+    const produto = await this.buscarProdutoCasoDeUso.executar(id);
 
     return produto;
   }
@@ -97,11 +96,7 @@ export class ProdutoController {
     @Param('id') id: string,
     @Body() dadosParaAtualizar: AtualizarProdutoDto,
   ) {
-    const atualizarProdutoCasoDeUso = new AtualizarProdutoCasoDeUso(
-      this.prisma,
-    );
-
-    const produtoAtualizado = await atualizarProdutoCasoDeUso.executar(
+    const produtoAtualizado = await this.atualizarProdutoCasoDeUso.executar(
       id,
       dadosParaAtualizar,
     );
@@ -122,8 +117,6 @@ export class ProdutoController {
   @Delete('produtos/:id')
   @HttpCode(204)
   async removerProduto(@Param('id') id: string) {
-    const removerProdutoCasoDeUso = new RemoverProdutoCasoDeUso(this.prisma);
-
-    await removerProdutoCasoDeUso.executar(id);
+    await this.removerProdutoCasoDeUso.executar(id);
   }
 }
